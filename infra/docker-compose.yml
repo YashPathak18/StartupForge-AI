@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: startupforge-postgres
+
+    environment:
+      POSTGRES_DB: startupforge
+      POSTGRES_USER: startupforge
+      POSTGRES_PASSWORD: startupforge
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    networks:
+      - startupforge-network
+
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  startupforge-network:
+    driver: bridge
