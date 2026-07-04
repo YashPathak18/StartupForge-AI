@@ -1,0 +1,30 @@
+# IntelliJ
+.idea/
+*.iml
+
+# Maven
+target/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Build
+out/
