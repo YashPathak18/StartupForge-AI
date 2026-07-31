@@ -1,0 +1,72 @@
+spring:
+  datasource:
+    url: ${AUTH_DB_URL}
+    username: ${AUTH_DB_USERNAME}
+    password: ${AUTH_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:true}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5671}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:true}
+
+  security:
+    # Note: we deliberately do NOT use Spring Security's OAuth2 login client
+    # registration (spring.security.oauth2.client.registration.*) here. That
+    # config is for the server-side redirect flow, which doesn't fit a
+    # stateless JWT API with a separate frontend. Instead, the frontend
+    # performs Google Sign-In itself and sends us the resulting ID token,
+    # which we verify directly (see GoogleAuthService) - only the client ID
+    # is needed for that, as the audience to verify against.
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiry-ms: ${JWT_ACCESS_TOKEN_EXPIRY_MS:900000}
+  refresh-token-expiry-ms: ${JWT_REFRESH_TOKEN_EXPIRY_MS:604800000}
+
+otp:
+  length: ${OTP_LENGTH:6}
+  expiry-seconds: ${OTP_EXPIRY_SECONDS:300}
+  resend-cooldown-seconds: ${OTP_RESEND_COOLDOWN_SECONDS:60}
+  max-attempts: ${OTP_MAX_ATTEMPTS:5}
+  # Dev-only: logs the generated OTP to the console so it can be tested via Postman
+  # before Notification Service (Phase 3) exists to actually email it out.
+  # Must be set to false (or removed) once real email delivery is wired up.
+  log-to-console: ${OTP_LOG_TO_CONSOLE:true}
+
+google:
+  # Used as the expected audience when verifying Google ID tokens sent by
+  # the frontend after Google Sign-In. Only the client ID is needed for
+  # token verification - no client secret, no redirect flow.
+  client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+
+app:
+  rabbitmq:
+    user-events-exchange: user.events.exchange
+    user-registered-routing-key: user.registered
