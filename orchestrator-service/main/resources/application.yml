@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: orchestrator-service
+
+server:
+  port: 8083
+
+services:
+  ai:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+  core:
+    url: ${CORE_SERVICE_URL:http://localhost:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

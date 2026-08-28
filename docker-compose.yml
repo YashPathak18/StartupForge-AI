@@ -1,0 +1,138 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: startupforge
+      POSTGRES_PASSWORD: startupforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U startupforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: startupforge
+      MINIO_ROOT_PASSWORD: startupforge123
+    volumes:
+      - minio_data:/data
+
+  kafka:
+    image: bitnami/kafka:3.9
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      AUTH_DATABASE_URL: jdbc:postgresql://postgres:5432/startupforge_auth
+      POSTGRES_USER: startupforge
+      POSTGRES_PASSWORD: startupforge
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-to-a-secure-32-byte-minimum}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+    env_file:
+      - .env
+
+  core-service:
+    build:
+      context: .
+      dockerfile: core-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      CORE_DATABASE_URL: jdbc:postgresql://postgres:5432/startupforge_core
+      POSTGRES_USER: startupforge
+      POSTGRES_PASSWORD: startupforge
+      AI_SERVICE_URL: http://ai-service:8000
+      ORCHESTRATOR_SERVICE_URL: http://orchestrator-service:8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+      orchestrator-service:
+        condition: service_started
+
+  orchestrator-service:
+    build:
+      context: .
+      dockerfile: orchestrator-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
+      CORE_SERVICE_URL: http://core-service:8082
+    depends_on:
+      ai-service:
+        condition: service_started
+      core-service:
+        condition: service_started
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8081
+      CORE_SERVICE_URL: http://core-service:8082
+      ORCHESTRATOR_SERVICE_URL: http://orchestrator-service:8083
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-to-a-secure-32-byte-minimum}
+    depends_on:
+      - auth-service
+      - core-service
+      - orchestrator-service
+
+volumes:
+  postgres_data:
+  minio_data:

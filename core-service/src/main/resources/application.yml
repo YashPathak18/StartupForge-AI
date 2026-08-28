@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: core-service
+  datasource:
+    url: ${CORE_DATABASE_URL:jdbc:postgresql://localhost:5432/startupforge_core}
+    username: ${POSTGRES_USER:startupforge}
+    password: ${POSTGRES_PASSWORD:startupforge}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+server:
+  port: 8082
+ai-service:
+  url: ${AI_SERVICE_URL:http://localhost:8000}

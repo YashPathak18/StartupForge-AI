@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${AUTH_DATABASE_URL:jdbc:postgresql://localhost:5432/startupforge_auth}
+    username: ${POSTGRES_USER:startupforge}
+    password: ${POSTGRES_PASSWORD:startupforge}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+startupforge:
+  security:
+    jwt-secret: ${JWT_SECRET:change-this-development-secret-to-a-secure-32-byte-minimum}
+    jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:60}
+server:
+  port: 8081
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
